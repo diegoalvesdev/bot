@@ -1,17 +1,18 @@
 # Pipeline Bot
-Proposta de implementação do projeto com criação de Pipeline na Google Cloud Plataform, solução em nuvem oferecida pelo Google.
+Proposta de implementação do projeto com criação de Pipeline na Google Cloud Plataform, solução em nuvem oferecida pelo Google. Para execucao do projeto, foram utilizadas solucoes GCP como: Coogle Storage, Cloud Scheduler, BigQuery, Cloud Pub/Sub e Cloud Function.
+
 
 ## Pipeline
 
 <!-- TOC start -->
 - [Arquivos XLSX](#arquivos-xlsx)
-- [Staging e curated area](#staging-e-curated-area)
+- [Staging e curated](#staging-e-curated)
 - [Twitter API](#twitter-api)
 <!-- TOC end -->
 
 ### Arquivos XLSX
 
-Para o desenvolvimento do step que diz respeito aos arquivos XLSX, a proposta compoe utilizacao de uma Cloud Function associada a trigger. O evento que dispara a trigger é a criacao de objetos em bucket do Google Storage. 
+Para o desenvolvimento do step que diz respeito aos arquivos XLSX, a proposta compoe utilizacao de uma Cloud Function associada a trigger. O evento que dispara a trigger é a criacao de objetos em bucket do Google Storage. Em resumo, quando é adicionado o arquivo XLSX, a function pega o nome do arquivo e cria uma tabela na raw do BigQuery com o mesmo nome do arquivo. Para tal tarefa, utilizou-se biblioteca pandas_gbq. Ela faz o mapeamento dos campos do objeto XLS para campos na tabela do BQ, de forma automatica. Muito semelhante a ideia do ORM.
 
 ~~~python
 
@@ -55,7 +56,7 @@ def import_xlsx(event, context):
 
 ~~~
 
-### Staging e curated area
+### Staging e curated
 
 Pensando em processos de Engenharia de Dados, temos *staging area* como local temporário onde os dados oriundos de arquivos XLSX (já convertidos para o BigQuery na Raw) são copiados. Desta forma, ao invés de acessar os dados diretamente da fonte (Raw), o processo de “transformação” do ETL pega os dados da staging.
 
