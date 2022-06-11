@@ -1,7 +1,7 @@
 # Pipeline Bot
 Proposta de implementação do projeto com criação de Pipeline na Google Cloud Plataform, solução em nuvem oferecida pelo Google. Para execucao do projeto, foram utilizadas solucoes GCP como: Coogle Storage, Cloud Scheduler, BigQuery, Cloud Pub/Sub e Cloud Function.
 
-![image](image.png)
+![Draw.io](índice.png)
 
 ## Pipeline
 
