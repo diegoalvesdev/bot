@@ -1,5 +1,5 @@
 # Pipeline Bot
-Proposta de implementação do projeto com criação de Pipeline na Google Cloud Plataform, solução em nuvem oferecida pelo Google. Para execucao do projeto, foram utilizadas solucoes GCP como: Coogle Storage, Cloud Scheduler, BigQuery, Cloud Pub/Sub e Cloud Function.
+Proposta de implementação do projeto com criação de Pipeline na Google Cloud Plataform, solução em nuvem oferecida pelo Google. Para execução do projeto, foram utilizadas soluções GCP como: Coogle Storage, Cloud Scheduler, BigQuery, Cloud Pub/Sub e Cloud Function.
 
 ![Draw.io](índice.png)
 
@@ -13,7 +13,7 @@ Proposta de implementação do projeto com criação de Pipeline na Google Cloud
 
 ### Arquivos XLSX
 
-Para o desenvolvimento do step que diz respeito aos arquivos XLSX, a proposta compoe utilizacao de uma Cloud Function associada a trigger. O evento que dispara a trigger é a criacao de objetos em bucket do Google Storage. Em resumo, quando é adicionado o arquivo XLSX, a function pega o nome do arquivo e cria uma tabela na raw do BigQuery com o mesmo nome do arquivo. Para tal tarefa, utilizou-se biblioteca pandas_gbq. Ela faz o mapeamento dos campos do objeto XLS para campos na tabela do BQ, de forma automatica. Muito semelhante a ideia do ORM.
+Para o desenvolvimento do step que diz respeito aos arquivos XLSX, a proposta compõe utilização de uma Cloud Function associada à trigger. O evento que dispara a trigger é a criação de objetos em bucket do Google Storage. Em resumo, quando é adicionado o arquivo XLSX, a function pega o nome do arquivo e cria uma tabela na raw do BigQuery, com o mesmo nome do arquivo. Para tal tarefa, utilizou-se biblioteca pandas_gbq. Ela faz o mapeamento dos campos do objeto XLS para campos na tabela do BQ, de forma automática. Muito semelhante a ideia do ORM.
 
 ~~~python
 
@@ -62,9 +62,9 @@ def import_xlsx(event, context):
 
 #### Staging area
 
-Pensando em processos de Engenharia de Dados, temos *staging area* como local temporário onde os dados oriundos de arquivos XLSX (já convertidos para o BigQuery na Raw) são copiados. Desta forma, ao invés de acessar os dados diretamente da fonte (Raw), o processo de “transformação” do ETL pega os dados da staging.
+Pensando em processos de Engenharia de Dados, temos staging area como local temporário onde os dados oriundos de arquivos XLSX (já convertidos para o BigQuery na Raw) são copiados. Desta forma, ao invés de acessar os dados diretamente da fonte (Raw), o processo de “transformação” do ETL pega os dados da staging.
 
-Para montagem da staging, algumas queries são executadas através de *Schedule* no BigQuery. Os scripts fazem o trabalho de selecao dos campos indicados pelas regras de negocio, bem como tratamento de dados que nao sao passiveis de analise, como dados duplicados. O agendamento ocorre para que inicialmente a staging seja montada e posteriormente a curated fique disponivel. Sempre pensando na possibilidade de nao existir limitacao quanto a quantidade de tabelas (a partir de objetos XLSX) disponiveis na raw.
+Para montagem da staging, algumas queries são executadas através de Schedule no BigQuery. Os scripts fazem o trabalho de seleção dos campos indicados pelas regras de negocio, bem como tratamento de dados que não são passiveis de análise, como dados duplicados. O agendamento ocorre para que, inicialmente, a staging seja montada, e posteriormente a curated fique disponível. Sempre pensando na possibilidade de não existir limitação quanto a quantidade de tabelas (a partir de objetos XLSX) disponíveis na raw.
 
 ~~~sql
 
@@ -93,9 +93,9 @@ WHERE
 
 #### Curated
 
-Pensando na camada curated, temos dados transformados e agredados para atender os requisitos do projeto. Temos nela, a uniao de dados brutos e prontos para serem consumidos por times de analistas e/ou cientistas de dados.
+Pensando na camada curated, temos dados transformados e agregados para atender os requisitos do projeto. Temos nela, a união de dados brutos e prontos para serem consumidos por times de analistas e/ou cientistas de dados.
 
-O grau de documentacao desta zona é importante, visto que ela deve ser alinhada a regras de negócio. No caso, abaixo temos a criacao da tabela 1, atendendo a regra de ter total de vendas para cada conjunto de mes / ano. Os dados, para montagem desta camada vem da staging area.
+O grau de documentação desta zona é importante, visto que ela deve ser alinhada a regras de negócio. No caso, abaixo temos a criação da tabela 1, atendendo a regra de ter total de vendas para cada conjunto de mês / ano. Os dados, para montagem desta camada vem da staging area.
 
 ~~~sql
 
@@ -113,11 +113,11 @@ CREATE OR REPLACE TABLE `nifty-time-351417.curated.tabela1` AS
 
 ### Twitter API
 
-Como forma de enriquecer os dados e gerar valor ao negócio. Foi proposta a utilizacao da API do Twitter com o objetivo de, apresentar os 50 mais recentes tuites e usuarios que fizeram referencia ao produto mais vendido em dezembro de 2019, bem como a marca Boticário.
+Como forma de enriquecer os dados e gerar valor ao negócio, foi proposta a utilização da API do Twitter com o objetivo de, apresentar os 50 mais recentes tuites e usuários que fizeram referência ao produto mais vendido em dezembro de 2019, bem como a marca Boticário.
 
-Para tal, foi utilizada uma Cloud Function, disparada por tópico criado no Cloud Pub/Sub. Este topico é agendada para ser o ultimo step do nosso pipeline. Ele ocorre, posteriormente a consolidacao da staging area, bem como a nossa cama de curated. É através da camada curated que conseguimos extrair a linha mais vendida em dezembro de 2019 (curated.tabela4 no BigQuery).
+Para tal, foi utilizada uma Cloud Function, disparada por tópico criado no Cloud Pub/Sub. Este tópico é agendada para ser o ultimo step do nosso pipeline. Ele ocorre, posteriormente a consolidação da staging area, bem como a nossa cama de curated. É através da camada curated que conseguimos extrair a linha mais vendida em dezembro de 2019 (curated.tabela4 no BigQuery).
 
-O script abaixo busca a linha mais vendida, utilizando ela como parametro para encontrar os tuítes. Ao final, ela consolida os resultados em uma nova tabela no BigQuery. Criando a tabela na primeira vez que a function é executada e posteriormente dando append nos dados. Finalizando assim o pipeline.
+O script abaixo busca a linha mais vendida, utilizando-a como parâmetro para encontrar os tuítes. Ao final, ela consolida os resultados em uma nova tabela no BigQuery, criando a tabela na primeira vez que a function é executada e posteriormente dando append nos dados. Finalizando assim o pipeline.
 
 
 ~~~python
