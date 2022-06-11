@@ -58,12 +58,12 @@ def import_xlsx(event, context):
 
 ### Staging e curated
 
+
+#### Staging area
+
 Pensando em processos de Engenharia de Dados, temos *staging area* como local temporário onde os dados oriundos de arquivos XLSX (já convertidos para o BigQuery na Raw) são copiados. Desta forma, ao invés de acessar os dados diretamente da fonte (Raw), o processo de “transformação” do ETL pega os dados da staging.
 
 Para montagem da staging, algumas queries são executadas através de *Schedule* no BigQuery. Os scripts fazem o trabalho de selecao dos campos indicados pelas regras de negocio, bem como tratamento de dados que nao sao passiveis de analise, como dados duplicados. O agendamento ocorre para que inicialmente a staging seja montada e posteriormente a curated fique disponivel. Sempre pensando na possibilidade de nao existir limitacao quanto a quantidade de tabelas (a partir de objetos XLSX) disponiveis na raw.
-
-
-#### Staging area
 
 ~~~sql
 
