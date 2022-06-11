@@ -1,2 +1,2 @@
-# bot
+# Pipeline Bot
 Desenvolvimento de pipeline na GCP
