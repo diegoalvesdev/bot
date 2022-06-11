@@ -57,14 +57,16 @@ def import_xlsx(event, context):
 
 ### Staging e curated area
 
-Para o desenvolvimento do step que diz respeito aos arquivos XLSX, a proposta compoe utilizacao de uma Cloud Function associada a trigger. O evento que dispara a trigger é a criacao de objetos em bucket do Google Storage. 
+Pensando em processos de Engenharia de Dados, temos *staging area* como local temporário onde os dados oriundos de arquivos XLSX (já convertidos para o BigQuery na Raw) são copiados. Desta forma, ao invés de acessar os dados diretamente da fonte (Raw), o processo de “transformação” do ETL pega os dados da staging.
+
+Para montagem da staging, algumas queries são executadas através de *Schedule* no BigQuery. Os scripts fazem o trabalho de selecao dos campos indicados pelas regras de negocio, bem como tratamento de dados que nao sao passiveis de analise, como dados duplicados. O agendamento ocorre para que inicialmente a staging seja montada e posteriormente a curated fique disponivel. Sempre pensando na possibilidade de nao existir limitacao quanto a quantidade de tabelas (a partir de objetos XLSX) disponiveis na raw.
 
 
 #### Staging area
 
 ~~~sql
 
-  -- 1 criando a tabela 1 na staging
+  -- Exemplo de criacao da tabela 1 na staging
 
 CREATE OR REPLACE TABLE
   `nifty-time-351417.staging.tabela1` AS
@@ -85,76 +87,17 @@ FROM (
 WHERE
   rnk = 1;
 
-
-  -- 2 criando a tabela 2 na staging
-
-CREATE OR REPLACE TABLE
-  `nifty-time-351417.staging.tabela2` AS
-SELECT
-  MARCA,
-  LINHA,
-  QTD_VENDA
-FROM (
-  SELECT
-    *,
-    ROW_NUMBER() OVER (PARTITION BY DATA_VENDA, QTD_VENDA, ID_LINHA, ID_MARCA) AS rnk
-  FROM
-    `nifty-time-351417.raw.base*`) A
-WHERE
-  rnk = 1;
-
-
-  -- 3 criando a tabela 3 na staging
-
-CREATE OR REPLACE TABLE
-  `nifty-time-351417.staging.tabela3` AS
-SELECT
-  MARCA,
-  EXTRACT(YEAR
-  FROM
-    DATA_VENDA) AS ANO,
-  EXTRACT(MONTH
-  FROM
-    DATA_VENDA) AS MES,
-  QTD_VENDA
-FROM (
-  SELECT
-    *,
-    ROW_NUMBER() OVER (PARTITION BY DATA_VENDA, QTD_VENDA, ID_LINHA, ID_MARCA) AS rnk
-  FROM
-    `nifty-time-351417.raw.base*`) A
-WHERE
-  rnk = 1;
-
-
--- 4 criando a tabela 4 na staging
-
-CREATE OR REPLACE TABLE
-  `nifty-time-351417.staging.tabela4` AS
-SELECT
-  LINHA,
-  EXTRACT(YEAR
-  FROM
-    DATA_VENDA) AS ANO,
-  EXTRACT(MONTH
-  FROM
-    DATA_VENDA) AS MES,
-  QTD_VENDA
-FROM (
-  SELECT
-    *,
-    ROW_NUMBER() OVER (PARTITION BY DATA_VENDA, QTD_VENDA, ID_LINHA, ID_MARCA) AS rnk
-  FROM
-    `nifty-time-351417.raw.base*`) A
-WHERE
-  rnk = 1;
 ~~~
 
-#### Curated area
+#### Curated
 
+Pensando na camada curated, temos dados transformados e agredados para atender os requisitos do projeto. Temos nela, a uniao de dados brutos e prontos para serem consumidos por times de analistas e/ou cientistas de dados.
+
+O grau de documentacao desta zona é importante, visto que ela deve ser alinhada a regras de negócio. No caso, abaixo temos a criacao da tabela 1, atendendo a regra de ter total de vendas para cada conjunto de mes / ano. Os dados, para montagem desta camada vem da staging area.
 
 ~~~sql
--- 1 criando tabela1 na curated
+
+-- Exemplo de criacao da tabela 1 na curated, alinhada aos requisitos
 
 CREATE OR REPLACE TABLE `nifty-time-351417.curated.tabela1` AS 
 (
@@ -163,38 +106,17 @@ CREATE OR REPLACE TABLE `nifty-time-351417.curated.tabela1` AS
   GROUP BY 1, 2
 );
 
--- 2 criando tabela2 na curated
-
-CREATE OR REPLACE TABLE `nifty-time-351417.curated.tabela2` AS 
-(
-  SELECT MARCA, LINHA, SUM(QTD_VENDA) AS TOTAL_VENDAS
-  FROM `nifty-time-351417.staging.tabela2`
-  GROUP BY 1, 2
-);
-
--- 3 criando tabela3 na curated
-
-CREATE OR REPLACE TABLE `nifty-time-351417.curated.tabela3` AS 
-(
-  SELECT MARCA, ANO, MES, SUM(QTD_VENDA) AS TOTAL_VENDAS
-  FROM `nifty-time-351417.staging.tabela3`
-  GROUP BY 1, 2, 3
-);
-
--- 4 criando tabela4 na curated
-
-CREATE OR REPLACE TABLE `nifty-time-351417.curated.tabela4` AS 
-(
-  SELECT LINHA, ANO, MES, SUM(QTD_VENDA) AS TOTAL_VENDAS
-  FROM `nifty-time-351417.staging.tabela4`
-  GROUP BY 1, 2, 3
-);
 ~~~
 
 
 ### Twitter API
 
-Para o desenvolvimento do step que diz respeito aos arquivos XLSX, a proposta compoe utilizacao de uma Cloud Function associada a trigger. O evento que dispara a trigger é a criacao de objetos em bucket do Google Storage. 
+Como forma de enriquecer os dados e gerar valor ao negócio. Foi proposta a utilizacao da API do Twitter com o objetivo de, apresentar os 50 mais recentes tuites e usuarios que fizeram referencia ao produto mais vendido em dezembro de 2019, bem como a marca Boticário.
+
+Para tal, foi utilizada uma Cloud Function, disparada por tópico criado no Cloud Pub/Sub. Este topico é agendada para ser o ultimo step do nosso pipeline. Ele ocorre, posteriormente a consolidacao da staging area, bem como a nossa cama de curated. É através da camada curated que conseguimos extrair a linha mais vendida em dezembro de 2019 (curated.tabela4 no BigQuery).
+
+O script abaixo busca a linha mais vendida, utilizando ela como parametro para encontrar os tuítes. Ao final, ela consolida os resultados em uma nova tabela no BigQuery. Criando a tabela na primeira vez que a function é executada e posteriormente dando append nos dados. Finalizando assim o pipeline.
+
 
 ~~~python
 
